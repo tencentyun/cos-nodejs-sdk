@@ -6,8 +6,11 @@ var formstream = require('formstream');
 var auth = require('./auth');
 var conf = require('./conf');
 
+var COS_PARAMS_ERROR = -1;
+var COS_NETWORK_ERROR = -2;
+
 function buildRequest(options, callback) {
-	return http.request(options,
+	var req = http.request(options,
 		function (res) {
 			var body = "";
 			res.on('data', function (data) { body += data; })
@@ -31,12 +34,17 @@ function buildRequest(options, callback) {
 					callback(result);
 
 				} else {
-					callback({'httpcode':res.statusCode, 'code':-1, 'message':'response '+body.toString()+' is not json', 'data':{}});
+					callback({'httpcode':res.statusCode, 'code':COS_NETWORK_ERROR, 'message':'response '+body.toString()+' is not json', 'data':{}});
 				}
 			});
 		}).on('error', function(e){
-			callback({'httpcode':0, 'code':-2, 'message':String(e.message), 'data':{}});
+			callback({'httpcode':0, 'code':COS_NETWORK_ERROR, 'message':String(e.message), 'data':{}});
 		});
+	req.setTimeout(conf.recvTimeout, function(){
+		req.end();
+		callback({'httpcode':0, 'code':COS_NETWORK_ERROR, 'message':'recv timeout', 'data':{}});
+	});
+	return req;
 }
 
 /**
@@ -48,7 +56,7 @@ function buildRequest(options, callback) {
  * @param  {Function} callback     用户上传完毕后执行的回调函数，可选，默认输出日志 格式为 function (ret) {}
  *                                 入参为ret：{'httpcode':200,'code':0,'message':'ok','data':{...}}
  */
-exports.upload = function(filePath, bucket, dstpath, bizattr, callback) {
+function upload(filePath, bucket, dstpath, bizattr, callback) {
 
 	if (typeof bizattr === 'function') {
 		callback = bizattr;
@@ -101,7 +109,7 @@ exports.upload = function(filePath, bucket, dstpath, bizattr, callback) {
 
 	} else {
 		// error, file not exists
-		callback({'httpcode':0, 'code':-1, 'message':'file '+filePath+' not exists or params error', 'data':{}});
+		callback({'httpcode':0, 'code':COS_PARAMS_ERROR, 'message':'file '+filePath+' not exists or params error', 'data':{}});
 	}
 }
 
@@ -116,7 +124,7 @@ exports.upload = function(filePath, bucket, dstpath, bizattr, callback) {
  * @param  {Function} callback     用户上传完毕后执行的回调函数，可选，默认输出日志 格式为 function (ret) {}
  *                                 入参为ret：{'httpcode':200,'code':0,'message':'ok','data':{...}}
  */
-exports.upload_slice = function(filePath, bucket, dstpath, bizattr, slice_size, session, callback) {
+function upload_slice(filePath, bucket, dstpath, bizattr, slice_size, session, callback) {
 
 	bucket = bucket.strip();
 	dstpath = encodeURIComponent(dstpath.strip()).replace('%2F','/');
@@ -227,7 +235,7 @@ function upload_prepare(filePath, bucket, dstpath, bizattr, slice_size, session,
 		});
 	} else {
 		// error, file not exists
-		callback({'httpcode':0, 'code':-1, 'message':'file '+filePath+' not exists or params error', 'data':{}});
+		callback({'httpcode':0, 'code':COS_PARAMS_ERROR, 'message':'file '+filePath+' not exists or params error', 'data':{}});
 	}
 }
 function upload_data(bucket, dstpath, filePath, offset, length, session, callback) {
@@ -262,16 +270,38 @@ function upload_data(bucket, dstpath, filePath, offset, length, session, callbac
 /**
  * 查询文件
  * @param  {string}   bucket       bucket目录名称，必须
+ * @param  {string}   path         文件路径，必须
+ * @param  {Function} callback     完毕后执行的回调函数，可选，默认输出日志 格式为 function (ret) {}
+ *                                 入参为ret：{'httpcode':200,'code':0,'message':'ok','data':{...}}
+ */
+function statFile(bucket, path, callback) {
+	bucket = bucket.strip();
+	path = encodeURIComponent(path.strip()).replace('%2F','/');
+	stat(bucket, path, callback);
+}
+/**
+ * 查询目录
+ * @param  {string}   bucket       bucket目录名称，必须
+ * @param  {string}   path         目录路径，目录必须以'/'结尾，若忘记，sdk会自动补齐，必须
+ * @param  {Function} callback     完毕后执行的回调函数，可选，默认输出日志 格式为 function (ret) {}
+ *                                 入参为ret：{'httpcode':200,'code':0,'message':'ok','data':{...}}
+ */
+function statFolder(bucket, path, callback) {
+	bucket = bucket.strip();
+	path = encodeURIComponent(path.strip() + '/').replace('%2F','/');
+	stat(bucket, path, callback);
+}
+/**
+ * 查询文件
+ * @param  {string}   bucket       bucket目录名称，必须
  * @param  {string}   path         目录/文件路径，目录必须以'/'结尾，文件不能以'/'结尾，必须
  * @param  {Function} callback     完毕后执行的回调函数，可选，默认输出日志 格式为 function (ret) {}
  *                                 入参为ret：{'httpcode':200,'code':0,'message':'ok','data':{...}}
  */
-exports.stat = function(bucket, path, callback) {
+function stat(bucket, path, callback) {
 	callback = callback || function(ret){console.log(ret)};
 
 	if (typeof callback === 'function') {
-		bucket = bucket.strip();
-		path = encodeURIComponent(path.lstrip()).replace('%2F','/');
 		var expired = parseInt(Date.now() / 1000) + conf.EXPIRED_SECONDS;
 		var sign  = auth.signMore(bucket, expired);
 		var url = generateResUrl(bucket, path);
@@ -294,10 +324,34 @@ exports.stat = function(bucket, path, callback) {
 
 	} else {
 		// error
-		callback({'httpcode':0, 'code':-1, 'message':'params error', 'data':{}});
+		callback({'httpcode':0, 'code':COS_PARAMS_ERROR, 'message':'params error', 'data':{}});
 	}
 }
 
+/**
+ * 删除文件
+ * @param  {string}   bucket       bucket目录名称，必须
+ * @param  {string}   path         文件路径，必须
+ * @param  {Function} callback     完毕后执行的回调函数，可选，默认输出日志 格式为 function (ret) {}
+ *                                 入参为ret：{'httpcode':200,'code':0,'message':'ok','data':{...}}
+ */
+function deleteFile(bucket, path, callback) {
+	bucket = bucket.strip();
+	path = encodeURIComponent(path.strip()).replace('%2F','/');
+	del(bucket, path, callback);
+}
+/**
+ * 删除目录
+ * @param  {string}   bucket       bucket目录名称，必须
+ * @param  {string}   path         目录路径，目录必须以'/'结尾，必须
+ * @param  {Function} callback     完毕后执行的回调函数，可选，默认输出日志 格式为 function (ret) {}
+ *                                 入参为ret：{'httpcode':200,'code':0,'message':'ok','data':{...}}
+ */
+function deleteFolder(bucket, path, callback) {
+	bucket = bucket.strip();
+	path = encodeURIComponent(path.strip()+'/').replace('%2F','/');
+	del(bucket, path, callback);
+}
 /**
  * 删除文件
  * @param  {string}   bucket       bucket目录名称，必须
@@ -305,13 +359,11 @@ exports.stat = function(bucket, path, callback) {
  * @param  {Function} callback     完毕后执行的回调函数，可选，默认输出日志 格式为 function (ret) {}
  *                                 入参为ret：{'httpcode':200,'code':0,'message':'ok','data':{...}}
  */
-exports.delete = function(bucket, path, callback) {
+function del(bucket, path, callback) {
 
 	callback = callback || function(ret){console.log(ret)};
 
-	if (path == '' || typeof callback === 'function') {
-		bucket = bucket.strip();
-		path = encodeURIComponent(path.lstrip()).replace('%2F','/');
+	if (path == '' || path == '/' || typeof callback === 'function') {
 		var expired = parseInt(Date.now() / 1000) + conf.EXPIRED_SECONDS;
 		var sign  = auth.signOnce(bucket, '/'+conf.APPID+'/'+bucket+'/'+path);
 		var url = generateResUrl(bucket, path);
@@ -339,10 +391,34 @@ exports.delete = function(bucket, path, callback) {
 
 	} else {
 		// error
-		callback({'httpcode':0, 'code':-1, 'message':'params error', 'data':{}});
+		callback({'httpcode':0, 'code':COS_PARAMS_ERROR, 'message':'params error', 'data':{}});
 	}
 }
 
+/**
+ * 更新文件
+ * @param  {string}   bucket       bucket目录名称，必须
+ * @param  {string}   path         文件路径，必须
+ * @param  {Function} callback     完毕后执行的回调函数，可选，默认输出日志 格式为 function (ret) {}
+ *                                 入参为ret：{'httpcode':200,'code':0,'message':'ok','data':{...}}
+ */
+function updateFile(bucket, path, bizattr, callback) {
+	bucket = bucket.strip();
+	path = encodeURIComponent(path.strip()).replace('%2F','/');
+	update(bucket, path, bizattr, callback);
+}
+/**
+ * 更新目录
+ * @param  {string}   bucket       bucket目录名称，必须
+ * @param  {string}   path         目录路径，目录必须以'/'结尾，必须
+ * @param  {Function} callback     完毕后执行的回调函数，可选，默认输出日志 格式为 function (ret) {}
+ *                                 入参为ret：{'httpcode':200,'code':0,'message':'ok','data':{...}}
+ */
+function updateFolder(bucket, path, bizattr, callback) {
+	bucket = bucket.strip();
+	path = encodeURIComponent(path.strip()+'/').replace('%2F','/');
+	update(bucket, path, bizattr, callback);
+}
 /**
  * 更新文件
  * @param  {string}   bucket       bucket目录名称，必须
@@ -350,14 +426,12 @@ exports.delete = function(bucket, path, callback) {
  * @param  {Function} callback     完毕后执行的回调函数，可选，默认输出日志 格式为 function (ret) {}
  *                                 入参为ret：{'httpcode':200,'code':0,'message':'ok','data':{...}}
  */
-exports.update = function(bucket, path, bizattr, callback) {
+function update(bucket, path, bizattr, callback) {
 
 	bizattr = bizattr || '';
 	callback = callback || function(ret){console.log(ret)};
 
 	if (typeof callback === 'function') {
-		bucket = bucket.strip();
-		path = encodeURIComponent(path.lstrip()).replace('%2F','/');
 		var expired = parseInt(Date.now() / 1000) + conf.EXPIRED_SECONDS;
 		var sign  = auth.signOnce(bucket, '/'+conf.APPID+'/'+bucket+'/'+path);
 		var url = generateResUrl(bucket, path);
@@ -384,10 +458,53 @@ exports.update = function(bucket, path, bizattr, callback) {
 
 	} else {
 		// error
-		callback({'httpcode':0, 'code':-1, 'message':'params error', 'data':{}});
+		callback({'httpcode':0, 'code':COS_PARAMS_ERROR, 'message':'params error', 'data':{}});
 	}
 }
 
+/**
+ * 目录列表
+ * @param  {string}   bucket       bucket目录名称，必须
+ * @param  {string}   path         
+				/			必须以'/'结尾
+				/[DirName]/		必须以'/'结尾
+ * @param  {int}      num          拉取的总数
+ * @param  {string}   pattern      eListBoth, ListDirOnly, eListFileOnly 默认eListBoth
+ * @param  {int}      order        默认正序(=0), 填1为反序
+ * @param  {string}   offset       透传字段,用于翻页,前端不需理解,需要往前/往后翻页则透传回来
+ * @param  {Function} callback     完毕后执行的回调函数，可选，默认输出日志 格式为 function (ret) {}
+ *                                 入参为ret：{'httpcode':200,'code':0,'message':'ok','data':{...}}
+ */
+function list(bucket, path, num, pattern, order, offset, callback) {
+	bucket = bucket.strip();
+	path = encodeURIComponent(path.strip()+'/').replace('%2F','/');
+	listFiles(bucket, path, num, pattern, order, offset, callback);
+}
+/**
+ * 前缀搜索
+ * @param  {string}   bucket       bucket目录名称，必须
+ * @param  {string}   path         
+				/			必须以'/'结尾
+				/[DirName]/		必须以'/'结尾
+ * @param  {string}   prefix       列出含prefix此前缀的所有文件
+ * @param  {int}      num          拉取的总数
+ * @param  {string}   pattern      eListBoth, ListDirOnly, eListFileOnly 默认eListBoth
+ * @param  {int}      order        默认正序(=0), 填1为反序
+ * @param  {string}   offset       透传字段,用于翻页,前端不需理解,需要往前/往后翻页则透传回来
+ * @param  {Function} callback     完毕后执行的回调函数，可选，默认输出日志 格式为 function (ret) {}
+ *                                 入参为ret：{'httpcode':200,'code':0,'message':'ok','data':{...}}
+ */
+function prefixSearch(bucket, path, prefix, num, pattern, order, offset, callback) {
+	bucket = bucket.strip();
+	path = encodeURIComponent(path.strip()).replace('%2F','/');
+	if (path == '') {
+		path = prefix;
+	} else {
+		path += '/'+prefix;
+	}
+
+	listFiles(bucket, path, num, pattern, order, offset, callback);
+}
 /**
  * 目录列表,前缀搜索
  * @param  {string}   bucket       bucket目录名称，必须
@@ -402,7 +519,7 @@ exports.update = function(bucket, path, bizattr, callback) {
  * @param  {Function} callback     完毕后执行的回调函数，可选，默认输出日志 格式为 function (ret) {}
  *                                 入参为ret：{'httpcode':200,'code':0,'message':'ok','data':{...}}
  */
-exports.listFiles = function(bucket, path, num, pattern, order, offset, callback) {
+function listFiles(bucket, path, num, pattern, order, offset, callback) {
 	if (typeof num === 'function') {
 		callback = num;
 		num = null;
@@ -423,8 +540,6 @@ exports.listFiles = function(bucket, path, num, pattern, order, offset, callback
 	callback = callback || function(ret){console.log(ret)};
 
 	if (typeof callback === 'function') {
-		bucket = bucket.strip();
-		path = encodeURIComponent(path.lstrip()).replace('%2F','/');
 		var expired = parseInt(Date.now() / 1000) + conf.EXPIRED_SECONDS;
 		var sign  = auth.signMore(bucket, expired);
 		var url = generateResUrl(bucket, path);
@@ -448,7 +563,7 @@ exports.listFiles = function(bucket, path, num, pattern, order, offset, callback
 
 	} else {
 		// error
-		callback({'httpcode':0, 'code':-1, 'message':'params error', 'data':{}});
+		callback({'httpcode':0, 'code':COS_PARAMS_ERROR, 'message':'params error', 'data':{}});
 	}
 }
 
@@ -459,7 +574,7 @@ exports.listFiles = function(bucket, path, num, pattern, order, offset, callback
  * @param  {Function} callback     完毕后执行的回调函数，可选，默认输出日志 格式为 function (ret) {}
  *                                 入参为ret：{'httpcode':200,'code':0,'message':'ok','data':{...}}
  */
-exports.createFolder = function(bucket, path, bizattr, callback) {
+function createFolder(bucket, path, bizattr, callback) {
 
 	if (typeof bizattr === 'function') {
 		callback = bizattr;
@@ -496,7 +611,7 @@ exports.createFolder = function(bucket, path, bizattr, callback) {
 		req && req.end(data);
 	} else {
 		// error
-		callback({'httpcode':0, 'code':-1, 'message':'params error', 'data':{}});
+		callback({'httpcode':0, 'code':COS_PARAMS_ERROR, 'message':'params error', 'data':{}});
 	}
 }
 
@@ -513,3 +628,15 @@ String.prototype.lstrip = function(){
 String.prototype.rstrip = function(){
 	return this.replace(/(\/*$)/g, '');
 }
+
+exports.upload = upload;
+exports.upload_slice = upload_slice;
+exports.statFile = statFile;
+exports.statFolder = statFolder;
+exports.deleteFile = deleteFile;
+exports.deleteFolder = deleteFolder;
+exports.updateFile = updateFile;
+exports.updateFolder = updateFolder;
+exports.list = list;
+exports.prefixSearch = prefixSearch;
+exports.createFolder = createFolder;

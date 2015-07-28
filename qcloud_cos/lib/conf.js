@@ -9,17 +9,20 @@ exports.SECRET_KEY = '您的SECRET_KEY';
 
 var pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../', 'package.json')));
 var ua = function() {
-    return 'QcloudNodejs/' + pkg.version + ' (' + os.type() + '; ' + os.platform() + '; ' + os.arch() + '; ) ';
+    return 'Qcloud-Cos-Nodejs/' + pkg.version + ' (' + os.type() + '; ' + os.platform() + '; ' + os.arch() + '; ) ';
 }
 
-// 30 days
-exports.EXPIRED_SECONDS = 2592000;
+// 签名的有效时间
+exports.EXPIRED_SECONDS = 60;
 
+exports.recvTimeout = 30000;
 exports.USER_AGENT = ua;
 exports.API_COS_END_POINT = 'http://web.file.myqcloud.com/files/v1/';
 
-exports.setAppInfo = function(appid, secretId, secretKey) {
+// timeout单位秒
+exports.setAppInfo = function(appid, secretId, secretKey, timeout) {
     module.exports.APPID = appid;
     module.exports.SECRET_ID = secretId;
     module.exports.SECRET_KEY = secretKey;
+    module.exports.recvTimeout = timeout * 1000;
 }

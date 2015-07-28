@@ -1,5 +1,5 @@
 
-var libpath = './tencentyun_cos';
+var libpath = './lib';
 
 module.exports = {
   auth:     require(libpath + '/auth.js'),

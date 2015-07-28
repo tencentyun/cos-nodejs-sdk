@@ -1,5 +1,5 @@
 {
-  "name": "tencentyun_cos",
+  "name": "qcloud_cos",
   "version": "1.0.0",
   "description": "node sdk for qcloud ",
   "main": "index.js",
