@@ -21,6 +21,7 @@ exports.API_COS_END_POINT = 'http://web.file.myqcloud.com/files/v1/';
 
 // timeout单位秒
 exports.setAppInfo = function(appid, secretId, secretKey, timeout) {
+    timeout = timeout || 30;
     module.exports.APPID = appid;
     module.exports.SECRET_ID = secretId;
     module.exports.SECRET_KEY = secretKey;
