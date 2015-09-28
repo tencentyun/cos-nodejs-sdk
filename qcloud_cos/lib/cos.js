@@ -470,15 +470,15 @@ function update(bucket, path, bizattr, callback) {
 				/[DirName]/		必须以'/'结尾
  * @param  {int}      num          拉取的总数
  * @param  {string}   pattern      eListBoth, ListDirOnly, eListFileOnly 默认eListBoth
- * @param  {int}      order        默认正序(=0), 填1为反序
- * @param  {string}   offset       透传字段,用于翻页,前端不需理解,需要往前/往后翻页则透传回来
+ * @param  {int}      order        默认正序(=0), 填1为反序，需要翻页时，正序时0代表下一页，1代表上一页。反续时1代表下一页，0代表上一页。
+ * @param  {string}   context      透传字段,用于翻页,前端不需理解,需要往前/往后翻页则透传回来，从返回的结果中取得，详见文档
  * @param  {Function} callback     完毕后执行的回调函数，可选，默认输出日志 格式为 function (ret) {}
  *                                 入参为ret：{'httpcode':200,'code':0,'message':'ok','data':{...}}
  */
-function list(bucket, path, num, pattern, order, offset, callback) {
+function list(bucket, path, num, pattern, order, context, callback) {
 	bucket = bucket.strip();
 	path = encodeURIComponent(path.strip()+'/').replace('%2F','/');
-	listFiles(bucket, path, num, pattern, order, offset, callback);
+	listFiles(bucket, path, num, pattern, order, context, callback);
 }
 /**
  * 前缀搜索
@@ -489,12 +489,12 @@ function list(bucket, path, num, pattern, order, offset, callback) {
  * @param  {string}   prefix       列出含prefix此前缀的所有文件
  * @param  {int}      num          拉取的总数
  * @param  {string}   pattern      eListBoth, ListDirOnly, eListFileOnly 默认eListBoth
- * @param  {int}      order        默认正序(=0), 填1为反序
- * @param  {string}   offset       透传字段,用于翻页,前端不需理解,需要往前/往后翻页则透传回来
+ * @param  {int}      order        默认正序(=0), 填1为反序，需要翻页时，正序时0代表下一页，1代表上一页。反续时1代表下一页，0代表上一页。
+ * @param  {string}   context      透传字段,用于翻页,前端不需理解,需要往前/往后翻页则透传回来，从返回的结果中取得，详见文档
  * @param  {Function} callback     完毕后执行的回调函数，可选，默认输出日志 格式为 function (ret) {}
  *                                 入参为ret：{'httpcode':200,'code':0,'message':'ok','data':{...}}
  */
-function prefixSearch(bucket, path, prefix, num, pattern, order, offset, callback) {
+function prefixSearch(bucket, path, prefix, num, pattern, order, context, callback) {
 	bucket = bucket.strip();
 	path = encodeURIComponent(path.strip()).replace('%2F','/');
 	if (path == '') {
@@ -503,7 +503,7 @@ function prefixSearch(bucket, path, prefix, num, pattern, order, offset, callbac
 		path += '/'+prefix;
 	}
 
-	listFiles(bucket, path, num, pattern, order, offset, callback);
+	listFiles(bucket, path, num, pattern, order, context, callback);
 }
 /**
  * 目录列表,前缀搜索
@@ -514,12 +514,12 @@ function prefixSearch(bucket, path, prefix, num, pattern, order, offset, callbac
 				/[DirName]/[prefix] 	列出含prefix此前缀的所有文件,不能以'/'结尾
  * @param  {int}      num          拉取的总数
  * @param  {string}   pattern      eListBoth, ListDirOnly, eListFileOnly 默认eListBoth
- * @param  {int}      order        默认正序(=0), 填1为反序
- * @param  {string}   offset       透传字段,用于翻页,前端不需理解,需要往前/往后翻页则透传回来
+ * @param  {int}      order        默认正序(=0), 填1为反序，需要翻页时，正序时0代表下一页，1代表上一页。反续时1代表下一页，0代表上一页。
+ * @param  {string}   context      透传字段,用于翻页,前端不需理解,需要往前/往后翻页则透传回来
  * @param  {Function} callback     完毕后执行的回调函数，可选，默认输出日志 格式为 function (ret) {}
  *                                 入参为ret：{'httpcode':200,'code':0,'message':'ok','data':{...}}
  */
-function listFiles(bucket, path, num, pattern, order, offset, callback) {
+function listFiles(bucket, path, num, pattern, order, context, callback) {
 	if (typeof num === 'function') {
 		callback = num;
 		num = null;
@@ -529,14 +529,14 @@ function listFiles(bucket, path, num, pattern, order, offset, callback) {
 	} else if (typeof order === 'function') {
 		callback = order;
 		order = null;
-	} else if (typeof offset === 'function') {
-		callback = offset;
-		offset = null;
+	} else if (typeof context === 'function') {
+		callback = context;
+		context = null;
 	}
 	num = num || 20;
 	pattern = pattern || 'eListBoth';
 	order = order || 0;
-	offset = offset || '';
+	context = encodeURIComponent(context || '');
 	callback = callback || function(ret){console.log(ret)};
 
 	if (typeof callback === 'function') {
@@ -552,7 +552,7 @@ function listFiles(bucket, path, num, pattern, order, offset, callback) {
 		var options = {
 			hostname: urlInfo.hostname,
 	 		port: urlInfo.port || 80,
-	  		path: urlInfo.path+'?op=list&num='+num+'&pattern='+pattern+'&order='+order+'&offset='+offset,
+	  		path: urlInfo.path+'?op=list&num='+num+'&pattern='+pattern+'&order='+order+'&context='+context,
 	  		method: 'GET',
 	  		headers: headers
 		};
@@ -616,7 +616,7 @@ function createFolder(bucket, path, bizattr, callback) {
 }
 
 function generateResUrl(bucket, path) {
-	return conf.API_COS_END_POINT+conf.APPID+'/'+bucket+'/'+path;
+	return conf.API_COS_END_POINT+conf.APPID+'/'+bucket+'/'+(path=='/'?"":path);
 }
 
 String.prototype.strip = function(){
