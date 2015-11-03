@@ -1,4 +1,5 @@
 var http = require('http');
+var https = require('https');
 var urlM = require('url');
 var fs = require('fs');
 var crypto = require('crypto');
@@ -10,7 +11,11 @@ var COS_PARAMS_ERROR = -1;
 var COS_NETWORK_ERROR = -2;
 
 function buildRequest(options, callback) {
-	var req = http.request(options,
+	var net = http;
+	if (options['protocol'] == "https:") {
+		net = https;
+	}
+	var req = net.request(options,
 		function (res) {
 			var body = "";
 			res.on('data', function (data) { body += data; })
@@ -96,8 +101,9 @@ function upload(filePath, bucket, dstpath, bizattr, callback) {
 				headers['User-Agent'] = conf.USER_AGENT();
 
 				var options = {
+					protocol: urlInfo.protocol,
 					hostname: urlInfo.hostname,
-					port: urlInfo.port || 80,
+					port: urlInfo.port,
 					path: urlInfo.path,
 					method: 'POST',
 					headers: headers
@@ -223,8 +229,9 @@ function upload_prepare(filePath, bucket, dstpath, bizattr, slice_size, session,
 				headers['User-Agent'] = conf.USER_AGENT();
 
 				var options = {
+					protocol: urlInfo.protocol,
 					hostname: urlInfo.hostname,
-	  				port: urlInfo.port || 80,
+	  				port: urlInfo.port,
 	  				path: urlInfo.path,
 	  				method: 'POST',
 	  				headers: headers
@@ -255,8 +262,9 @@ function upload_data(bucket, dstpath, filePath, offset, length, session, callbac
 	headers['User-Agent'] = conf.USER_AGENT();
 
 	var options = {
+		protocol: urlInfo.protocol,
 		hostname: urlInfo.hostname,
-		port: urlInfo.port || 80,
+		port: urlInfo.port,
 		path: urlInfo.path,
 		method: 'POST',
 		headers: headers
@@ -312,8 +320,9 @@ function stat(bucket, path, callback) {
 		headers['User-Agent'] = conf.USER_AGENT();
 
 		var options = {
+			protocol: urlInfo.protocol,
 			hostname: urlInfo.hostname,
-	 		port: urlInfo.port || 80,
+	 		port: urlInfo.port,
 	  		path: urlInfo.path+'?op=stat',
 	  		method: 'GET',
 	  		headers: headers
@@ -379,8 +388,9 @@ function del(bucket, path, callback) {
 
 
 		var options = {
+			protocol: urlInfo.protocol,
 			hostname: urlInfo.hostname,
-	  		port: urlInfo.port || 80,
+	  		port: urlInfo.port,
 	  		path: urlInfo.path,
 	  		method: 'POST',
 	  		headers: headers
@@ -446,8 +456,9 @@ function update(bucket, path, bizattr, callback) {
 		headers['Content-Length'] = data.length;
 
 		var options = {
+			protocol: urlInfo.protocol,
 			hostname: urlInfo.hostname,
-	  		port: urlInfo.port || 80,
+	  		port: urlInfo.port,
 	  		path: urlInfo.path,
 	  		method: 'POST',
 	  		headers: headers
@@ -471,7 +482,7 @@ function update(bucket, path, bizattr, callback) {
  * @param  {int}      num          拉取的总数
  * @param  {string}   pattern      eListBoth, ListDirOnly, eListFileOnly 默认eListBoth
  * @param  {int}      order        默认正序(=0), 填1为反序，需要翻页时，正序时0代表下一页，1代表上一页。反续时1代表下一页，0代表上一页。
- * @param  {string}   context      透传字段,用于翻页,前端不需理解,需要往前/往后翻页则透传回来，从返回的结果中取得，详见文档
+ * @param  {string}   context      透传字段,用于翻页,前端不需理解,需要往前/往后翻页则透传回来
  * @param  {Function} callback     完毕后执行的回调函数，可选，默认输出日志 格式为 function (ret) {}
  *                                 入参为ret：{'httpcode':200,'code':0,'message':'ok','data':{...}}
  */
@@ -490,7 +501,7 @@ function list(bucket, path, num, pattern, order, context, callback) {
  * @param  {int}      num          拉取的总数
  * @param  {string}   pattern      eListBoth, ListDirOnly, eListFileOnly 默认eListBoth
  * @param  {int}      order        默认正序(=0), 填1为反序，需要翻页时，正序时0代表下一页，1代表上一页。反续时1代表下一页，0代表上一页。
- * @param  {string}   context      透传字段,用于翻页,前端不需理解,需要往前/往后翻页则透传回来，从返回的结果中取得，详见文档
+ * @param  {string}   context      透传字段,用于翻页,前端不需理解,需要往前/往后翻页则透传回来
  * @param  {Function} callback     完毕后执行的回调函数，可选，默认输出日志 格式为 function (ret) {}
  *                                 入参为ret：{'httpcode':200,'code':0,'message':'ok','data':{...}}
  */
@@ -550,8 +561,9 @@ function listFiles(bucket, path, num, pattern, order, context, callback) {
 		headers['User-Agent'] = conf.USER_AGENT();
 
 		var options = {
+			protocol: urlInfo.protocol,
 			hostname: urlInfo.hostname,
-	 		port: urlInfo.port || 80,
+	 		port: urlInfo.port,
 	  		path: urlInfo.path+'?op=list&num='+num+'&pattern='+pattern+'&order='+order+'&context='+context,
 	  		method: 'GET',
 	  		headers: headers
@@ -600,8 +612,9 @@ function createFolder(bucket, path, bizattr, callback) {
 		headers['User-Agent'] = conf.USER_AGENT();
 
 		var options = {
+			protocol: urlInfo.protocol,
 			hostname: urlInfo.hostname,
-	  		port: urlInfo.port || 80,
+	  		port: urlInfo.port,
 	  		path: urlInfo.path,
 	  		method: 'POST',
 	  		headers: headers
