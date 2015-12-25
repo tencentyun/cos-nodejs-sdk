@@ -73,7 +73,7 @@ function upload(filePath, bucket, dstpath, bizattr, callback) {
 	var isExists = fs.existsSync(filePath);
 	if (isExists && typeof callback === 'function') {
 		bucket = bucket.strip();
-		dstpath = encodeURIComponent(dstpath.strip()).replace('%2F','/');
+		dstpath = encodeURIComponent(dstpath.strip()).replace(/%2F/g,'/');
 		var expired = parseInt(Date.now() / 1000) + conf.EXPIRED_SECONDS;
 		var sign  = auth.signMore(bucket, expired);
 		var url = generateResUrl(bucket, dstpath);
@@ -133,7 +133,7 @@ function upload(filePath, bucket, dstpath, bizattr, callback) {
 function upload_slice(filePath, bucket, dstpath, bizattr, slice_size, session, callback) {
 
 	bucket = bucket.strip();
-	dstpath = encodeURIComponent(dstpath.strip()).replace('%2F','/');
+	dstpath = encodeURIComponent(dstpath.strip()).replace(/%2F/g,'/');
 	if (typeof bizattr === 'function') {
 		callback = bizattr;
 		bizattr = null;
@@ -284,7 +284,7 @@ function upload_data(bucket, dstpath, filePath, offset, length, session, callbac
  */
 function statFile(bucket, path, callback) {
 	bucket = bucket.strip();
-	path = encodeURIComponent(path.strip()).replace('%2F','/');
+	path = encodeURIComponent(path.strip()).replace(/%2F/g,'/');
 	stat(bucket, path, callback);
 }
 /**
@@ -296,7 +296,7 @@ function statFile(bucket, path, callback) {
  */
 function statFolder(bucket, path, callback) {
 	bucket = bucket.strip();
-	path = encodeURIComponent(path.strip() + '/').replace('%2F','/');
+	path = encodeURIComponent(path.strip() + '/').replace(/%2F/g,'/');
 	stat(bucket, path, callback);
 }
 /**
@@ -346,7 +346,7 @@ function stat(bucket, path, callback) {
  */
 function deleteFile(bucket, path, callback) {
 	bucket = bucket.strip();
-	path = encodeURIComponent(path.strip()).replace('%2F','/');
+	path = encodeURIComponent(path.strip()).replace(/%2F/g,'/');
 	del(bucket, path, callback);
 }
 /**
@@ -358,7 +358,7 @@ function deleteFile(bucket, path, callback) {
  */
 function deleteFolder(bucket, path, callback) {
 	bucket = bucket.strip();
-	path = encodeURIComponent(path.strip()+'/').replace('%2F','/');
+	path = encodeURIComponent(path.strip()+'/').replace(/%2F/g,'/');
 	del(bucket, path, callback);
 }
 /**
@@ -414,7 +414,7 @@ function del(bucket, path, callback) {
  */
 function updateFile(bucket, path, bizattr, callback) {
 	bucket = bucket.strip();
-	path = encodeURIComponent(path.strip()).replace('%2F','/');
+	path = encodeURIComponent(path.strip()).replace(/%2F/g,'/');
 	update(bucket, path, bizattr, callback);
 }
 /**
@@ -426,7 +426,7 @@ function updateFile(bucket, path, bizattr, callback) {
  */
 function updateFolder(bucket, path, bizattr, callback) {
 	bucket = bucket.strip();
-	path = encodeURIComponent(path.strip()+'/').replace('%2F','/');
+	path = encodeURIComponent(path.strip()+'/').replace(/%2F/g,'/');
 	update(bucket, path, bizattr, callback);
 }
 /**
@@ -488,7 +488,7 @@ function update(bucket, path, bizattr, callback) {
  */
 function list(bucket, path, num, pattern, order, context, callback) {
 	bucket = bucket.strip();
-	path = encodeURIComponent(path.strip()+'/').replace('%2F','/');
+	path = encodeURIComponent(path.strip()+'/').replace(/%2F/g,'/');
 	listFiles(bucket, path, num, pattern, order, context, callback);
 }
 /**
@@ -507,7 +507,7 @@ function list(bucket, path, num, pattern, order, context, callback) {
  */
 function prefixSearch(bucket, path, prefix, num, pattern, order, context, callback) {
 	bucket = bucket.strip();
-	path = encodeURIComponent(path.strip()).replace('%2F','/');
+	path = encodeURIComponent(path.strip()).replace(/%2F/g,'/');
 	if (path == '') {
 		path = prefix;
 	} else {
@@ -597,7 +597,7 @@ function createFolder(bucket, path, bizattr, callback) {
 
 	if (typeof callback === 'function') {
 		bucket = bucket.strip();
-		path = encodeURIComponent(path.strip() + '/').replace('%2F','/');
+		path = encodeURIComponent(path.strip() + '/').replace(/%2F/g,'/');
 		var expired = parseInt(Date.now() / 1000) + conf.EXPIRED_SECONDS;
 		var sign  = auth.signMore(bucket, expired);
 		var url = generateResUrl(bucket, path);
