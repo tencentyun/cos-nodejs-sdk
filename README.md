@@ -18,10 +18,10 @@ qcloud.conf.setAppInfo('100000', 'AKIDoooooooooooooooooooooooooooooooo', 'ROllll
 
 /*
 * 各接口的callback 为单个参数的function： function(ret){}
-* ret 为 {'httpcode':200,'code':0,'message':'ok','data':{}} 的对象，其中data的内容依接口有所不同
+* ret 为 {'code':0,'message':'ok','data':{}} 的对象，其中data的内容依接口有所不同
 */
 //上传文件
-qcloud.cos.upload('/tmp/test.txt', 'bucket', 'text/1.txt', function(ret){
+qcloud.cos.upload('/tmp/test.txt', 'bucket', 'text/1.txt','new myattr',1, function(ret){
     if (ret.code != 0) {
         console.log(ret);
     }else{
@@ -48,4 +48,14 @@ qcloud.cos.list('bucket', '/', 20, 'eListFileOnly');
 //获取指定目录下以'abc'开头的文件
 qcloud.cos.prefixSearch('bucket', '/firstDir/', 'abc', 20, 'eListFileOnly');
 
+//设置文件权限以及自定义header
+var headers = {
+        "Cache-Control": "no-cache",
+        "Content-Type" : "application/json",
+        "Content-Encoding" : "utf-8"
+    };
+    
+qcloud_cos.cos.updateFile('0001', '123/test_slice.dat', 'newattr', 'eWRPrivate', headers, function(ret) {console.log(ret)});
+
 ```
+
