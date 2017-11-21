@@ -1,7 +1,7 @@
 # qcloud_cos-node
 nodejs sdk for [腾讯云COS服务]
 
-**该SDK不推荐使用，请使用[XML SDK](https://github.com/tencentyun/cos-nodejs-sdk)**
+**该SDK不推荐使用，请使用[XML SDK](https://github.com/tencentyun/cos-nodejs-sdk-v5)**
 
 ## 安装
 npm install qcloud_cos
